@@ -84,7 +84,7 @@ class MessageRoutage(context: Context, myDeviceId:String) {
 
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
-            connectionsClient.requestConnection("MonNom", endpointId, connectionLifecycleCallback)
+            connectionsClient.requestConnection(myDeviceId, endpointId, connectionLifecycleCallback)
                 .addOnSuccessListener {
                     Log.d(TAG, "Demande de connexion envoyée à : $endpointId")
                 }
