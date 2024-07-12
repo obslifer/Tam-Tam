@@ -1,5 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Couleurs de fond -->
+    <color name="message_background_sent">#DCF8C6</color>
+    <color name="message_background_received">#E0E0E0</color>
+
+    <!-- Couleurs de fond -->
+    <color name="background">#FFFFFF</color>
+    <color name="button_primary_pressed">#C05F15</color>
+    <color name="orange_light">#FFB74D</color> <!-- Couleur orange légère ajoutée -->
+
+    <!-- Couleurs de texte -->
+    <color name="text_primary">#000000</color>
+    <color name="text_secondary">#000000</color>
+    <color name="username">#E57B1E</color>
+
+    <!-- Couleurs des boutons -->
+    <color name="button_primary">#905B0C</color>
+    <color name="icon_primary">#E5741E</color>
+    <color name="icon_secondary">#9E9E9E</color>
+
+    <!-- Notifications -->
+    <color name="notification_red">#D32F2F</color>
+
+    <!-- Couleurs existantes -->
     <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <color name="white">#FFFFFF</color>
+    <color name="gray">#B0BEC5</color>
 </resources>

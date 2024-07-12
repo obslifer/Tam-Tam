@@ -1,31 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="24dp"
+    android:background="@color/background">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nouvelle Conversation"
+        android:textSize="24sp"
+        android:textColor="@color/text_primary"
+        android:textStyle="bold"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- Champ de saisie du nom -->
     <EditText
         android:id="@+id/etName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Name"
+        android:hint="Nom"
         android:inputType="textPersonName"
-        android:padding="8dp" />
+        android:background="@drawable/edit_text_background"
+        android:padding="16dp"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp"/>
 
+    <!-- Champ de saisie du numéro de téléphone -->
     <EditText
         android:id="@+id/etPhoneNumber"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Phone Number"
+        android:hint="Numero de telephone"
         android:inputType="phone"
-        android:padding="8dp"
-        android:layout_marginBottom="16dp" />
+        android:background="@drawable/edit_text_background"
+        android:padding="16dp"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:layout_marginBottom="24dp"/>
 
+    <!-- Bouton pour commencer une conversation -->
     <Button
         android:id="@+id/btnStartConversation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Start Conversation"
-        android:padding="12dp" />
+        android:textColor="@color/white"
+        android:backgroundTint="@color/button_primary"
+        app:rippleColor="@color/button_primary_pressed"
+        android:padding="16dp"
+        android:textSize="16sp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="32dp"
+        android:gravity="center"/>
+
 </LinearLayout>

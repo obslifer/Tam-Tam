@@ -38,18 +38,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Entrer le message"
-            android:padding="10dp"
-            android:background="@drawable/edit_text_background"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp" />
+            android:hint="Type a message"
+            style="@style/EditTextStyle" />
 
         <Button
             android:id="@+id/btnPhoto"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:backgroundTint="@color/button_primary"
-            android:textColor="@android:color/white"
+            style="@style/ButtonStyle"
             android:layout_marginStart="8dp"
             android:contentDescription="Send Photo"
             android:text="+" />
@@ -58,11 +54,9 @@
             android:id="@+id/btnSend"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:backgroundTint="@color/button_primary"
-            android:textColor="@android:color/white"
+            style="@style/ButtonStyle"
             android:layout_marginStart="8dp"
             android:contentDescription="Send Message"
             android:text="Send" />
     </LinearLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>
