@@ -8,7 +8,7 @@ data class Message(
     val sender: String,
 
     @SerializedName("recipient")
-    val recipient: String,
+    var recipient: String,
 
     @SerializedName("content")
     val content: String,

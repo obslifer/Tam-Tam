@@ -227,6 +227,21 @@ object NearbyService {
                     Log.d(TAG, "Message relay limit reached")
                 }
             }
+            // Check if the message is a general message (recipient is "0")
+            if (message.recipient == "0") {
+                Log.d(TAG, "General message received: ${message.content}")
+
+                message.recipient = currentUserPhoneNumber
+
+                // Check if sender is in contacts
+                val contact = DatabaseHelper.getContact(message.sender)
+                if (contact == null) {
+                    // If not in contacts, save as unknown contact
+                    DatabaseHelper.saveContact(message.sender, "Inconnu")
+                }
+
+                DatabaseHelper.saveMessage(message)
+            }
         }
     }
 
