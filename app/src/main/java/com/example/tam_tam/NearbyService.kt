@@ -107,7 +107,7 @@ object NearbyService {
         CoroutineScope(Dispatchers.Main).launch {
             discoveredEndpoints.forEach { endpoint ->
                 if (endpoint.available) {
-                    sendPayloadWithRetry(endpoint.id, message, 0)
+                    sendPayloadWithRetry(endpoint.id, message, 3)
                 }
             }
         }
@@ -248,7 +248,7 @@ object NearbyService {
     fun sendMessageToRecipient(message: Message) {
         CoroutineScope(Dispatchers.Main).launch {
             val recipientEndpoint = discoveredEndpoints.find { it.name == message.recipient }
-            if (recipientEndpoint != null) {
+            if (recipientEndpoint != null && recipientEndpoint.available) {
                 sendMessageToEndpoint(recipientEndpoint.id, message)
             } else {
                 sendMessageToAllEndpoints(message)
