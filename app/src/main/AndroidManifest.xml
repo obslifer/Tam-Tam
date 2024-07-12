@@ -31,6 +31,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".activities.NewConversationActivity" />
+        <activity android:name=".activities.ChatActivity" />
+        <activity android:name=".activities.CreateAccountActivity" />
+        <activity android:name=".activities.ContactsActivity" />
     </application>
 
 </manifest>

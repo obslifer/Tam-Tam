@@ -1,27 +1,36 @@
 package com.example.tam_tam
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
 import android.os.Bundle
-import com.example.tam_tam.NearbyConnection.ConnectionManager
+import androidx.appcompat.app.AppCompatActivity
+import com.example.tam_tam.activities.ContactsActivity
+import com.example.tam_tam.activities.CreateAccountActivity
 
 class MainActivity : AppCompatActivity() {
-    // Déclaration de l'instance de ConnectionManager
-    private lateinit var connectionManager: ConnectionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Initialisation de ConnectionManager
-        connectionManager = ConnectionManager(this)
-        val endpointName = generateUniqueEndpointName()
-        // Démarrage de la publicité et de la découverte
-        connectionManager.startAdvertisingAndDiscovery(endpointName)
+        UserDatabaseHelper.init(this)
+
+        checkUserAccount()
     }
 
-    // Génération d'un nom unique pour chaque appareil
-    private fun generateUniqueEndpointName(): String {
-        // Implémentez une logique pour générer un nom unique pour chaque appareil
-        return "Device_${System.currentTimeMillis()}"
+    private fun checkUserAccount() {
+        val user = UserDatabaseHelper.getAllUsers().firstOrNull()
+        if (user != null) {
+            // User already has an account, proceed to ContactsActivity
+            val intent = Intent(this, ContactsActivity::class.java)
+            val senderPhoneNumber = UserDatabaseHelper.getAllUsers().firstOrNull()?.phoneNumber ?: ""
+            NearbyService.start(this, senderPhoneNumber)
+            startActivity(intent)
+            finish()
+        } else {
+            // No user account found, proceed to CreateAccountActivity
+            val intent = Intent(this, CreateAccountActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
     }
 }
