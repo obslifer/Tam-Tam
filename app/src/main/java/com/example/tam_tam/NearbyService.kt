@@ -10,7 +10,6 @@ import com.google.android.gms.nearby.connection.*
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @SuppressLint("StaticFieldLeak")
@@ -92,22 +91,22 @@ object NearbyService {
         }
     }
 
-    fun sendMessageToEndpoint(endpointId: String, message: Message) {
+    fun sendMessageToEndpoint(endpointId: String, message: Message, deviceNumber: String) {
         CoroutineScope(Dispatchers.Main).launch {
             val endpoint = discoveredEndpoints.find { it.id == endpointId }
             if (endpoint != null && endpoint.available) {
-                sendPayloadWithRetry(endpointId, message, 3)
+                sendPayloadWithRetry(endpointId, message, deviceNumber, 3)
             } else {
                 Log.e(TAG, "Endpoint $endpointId not available")
             }
         }
     }
 
-    fun sendMessageToAllEndpoints(message: Message) {
+    fun sendMessageToAllEndpoints(message: Message, deviceNumber: String) {
         CoroutineScope(Dispatchers.Main).launch {
             discoveredEndpoints.forEach { endpoint ->
                 if (endpoint.available) {
-                    sendPayloadWithRetry(endpoint.id, message, 3)
+                    sendPayloadWithRetry(endpoint.id, message, deviceNumber, 3)
                 }
             }
         }
@@ -131,7 +130,7 @@ object NearbyService {
             }
     }
 
-    private fun sendPayloadWithRetry(endpointId: String, message: Message, retryCount: Int) {
+    private fun sendPayloadWithRetry(endpointId: String, message: Message, deviceNumber: String, retryCount: Int) {
         if (retryCount <= 0) {
             Log.e(TAG, "Payload send retries exhausted for endpoint: $endpointId")
             Toast.makeText(context, "Failed to send message to endpoint: $endpointId", Toast.LENGTH_SHORT).show()
@@ -142,10 +141,13 @@ object NearbyService {
         Nearby.getConnectionsClient(context).sendPayload(endpointId, payload)
             .addOnSuccessListener {
                 Log.d(TAG, "Payload sent to: $endpointId")
+                CoroutineScope(Dispatchers.Main).launch {
+                    DatabaseHelper.saveMessage(message, deviceNumber)
+                }
             }
             .addOnFailureListener {
                 Log.e(TAG, "Payload send failed to: $endpointId", it)
-                sendPayloadWithRetry(endpointId, message, retryCount - 1)
+                sendPayloadWithRetry(endpointId, message, deviceNumber, retryCount - 1)
             }
     }
 
@@ -205,7 +207,7 @@ object NearbyService {
     private fun handleMessage(message: Message) {
         CoroutineScope(Dispatchers.Main).launch {
             // Save message
-            DatabaseHelper.saveMessage(message)
+            DatabaseHelper.saveMessage(message, currentUserPhoneNumber)
 
             // Check if the message is for the current user
             if (message.recipient == currentUserPhoneNumber) {
@@ -222,7 +224,7 @@ object NearbyService {
             } else {
                 if (message.relays.size < 10) {
                     message.relays.add(currentUserPhoneNumber)
-                    sendMessageToAllEndpoints(message)
+                    sendMessageToAllEndpoints(message, currentUserPhoneNumber)
                 } else {
                     Log.d(TAG, "Message relay limit reached")
                 }
@@ -240,7 +242,7 @@ object NearbyService {
                     DatabaseHelper.saveContact(message.sender, "Inconnu")
                 }
 
-                DatabaseHelper.saveMessage(message)
+                DatabaseHelper.saveMessage(message, currentUserPhoneNumber)
             }
         }
     }
@@ -249,9 +251,9 @@ object NearbyService {
         CoroutineScope(Dispatchers.Main).launch {
             val recipientEndpoint = discoveredEndpoints.find { it.name == message.recipient }
             if (recipientEndpoint != null && recipientEndpoint.available) {
-                sendMessageToEndpoint(recipientEndpoint.id, message)
+                sendMessageToEndpoint(recipientEndpoint.id, message, currentUserPhoneNumber)
             } else {
-                sendMessageToAllEndpoints(message)
+                sendMessageToAllEndpoints(message, currentUserPhoneNumber)
             }
         }
     }
@@ -263,8 +265,8 @@ object NearbyService {
         return json.toByteArray(Charsets.UTF_8)
     }
 
-    private fun deserializeMessage(data: ByteArray): Message {
-        val json = String(data, Charsets.UTF_8)
+    private fun deserializeMessage(bytes: ByteArray): Message {
+        val json = bytes.toString(Charsets.UTF_8)
         return gson.fromJson(json, Message::class.java)
     }
 }

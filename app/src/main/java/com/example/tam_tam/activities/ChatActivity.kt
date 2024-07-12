@@ -40,6 +40,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var messageList: MutableList<Message>
     private lateinit var recipientPhoneNumber: String
     private lateinit var senderPhoneNumber: String
+    private lateinit var currentDeviceNumber: String
 
     companion object {
         private const val REQUEST_CODE = 100
@@ -60,6 +61,7 @@ class ChatActivity : AppCompatActivity() {
 
         recipientPhoneNumber = intent.getStringExtra("contactPhoneNumber") ?: ""
         senderPhoneNumber = UserDatabaseHelper.getAllUsers().firstOrNull()?.phoneNumber ?: ""
+        currentDeviceNumber = "YOUR_DEVICE_NUMBER" // Replace this with the actual method to get the device number
 
         // Set up RecyclerView
         messageList = mutableListOf()
@@ -160,7 +162,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun loadMessages() {
         CoroutineScope(Dispatchers.Main).launch {
-            val messages = DatabaseHelper.getMessagesForConversation(senderPhoneNumber, recipientPhoneNumber)
+            val messages = DatabaseHelper.getMessagesForConversation(senderPhoneNumber, recipientPhoneNumber, currentDeviceNumber)
             messageList.clear()
             messageList.addAll(messages)
             chatAdapter.notifyDataSetChanged()
@@ -168,22 +170,16 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun sendMessage(message: Message) {
-        // This is just a placeholder. Implement the actual sending via NearbyService.
+        // Send the message via NearbyService
         NearbyService.sendMessageToRecipient(message)
         messageList.add(message)
 
         CoroutineScope(Dispatchers.Main).launch {
-            val messages =
-                DatabaseHelper.getMessagesForConversation(senderPhoneNumber, recipientPhoneNumber)
-            Log.d("message", messages.toString())
+            // Save the message to the local database
+            DatabaseHelper.saveMessage(message, currentDeviceNumber)
         }
 
         chatAdapter.notifyItemInserted(messageList.size - 1)
         recyclerView.scrollToPosition(messageList.size - 1)
-
-        // Save the message to the local database
-        CoroutineScope(Dispatchers.Main).launch {
-            DatabaseHelper.saveMessage(message)
-        }
     }
 }

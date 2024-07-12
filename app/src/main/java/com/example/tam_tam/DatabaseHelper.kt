@@ -1,6 +1,7 @@
 package com.example.tam_tam
 
 import android.content.Context
+import com.example.tam_tam.adapters.CryptoUtil
 import com.example.tam_tam.models.Contact
 import com.example.tam_tam.models.Message
 import com.example.tam_tam.models.RealmDiscoveredEndpoint
@@ -10,6 +11,7 @@ import io.realm.RealmConfiguration
 import io.realm.kotlin.where
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.crypto.SecretKey
 
 object DatabaseHelper {
 
@@ -23,9 +25,11 @@ object DatabaseHelper {
         Realm.setDefaultConfiguration(config)
     }
 
-    suspend fun saveMessage(message: Message) {
+    suspend fun saveMessage(message: Message, deviceNumber: String) {
         withContext(Dispatchers.IO) {
-            val realmMessage = RealmMessage.fromMessage(message)
+            val key: SecretKey = CryptoUtil.generateKey(deviceNumber)
+            val encryptedContent = CryptoUtil.encrypt(message.content, key)
+            val realmMessage = RealmMessage.fromMessage(message.copy(content = encryptedContent))
             val realm = Realm.getDefaultInstance()
             realm.executeTransaction { it.insertOrUpdate(realmMessage) }
             realm.close()
@@ -42,17 +46,21 @@ object DatabaseHelper {
         }
     }
 
-    suspend fun getMessageById(id: String): Message? {
+    suspend fun getMessageById(id: String, deviceNumber: String): Message? {
         return withContext(Dispatchers.IO) {
             val realm = Realm.getDefaultInstance()
             val result = realm.where<RealmMessage>().equalTo("id", id).findFirst()
             val message = result?.toMessage()
             realm.close()
-            message
+            message?.let {
+                val key: SecretKey = CryptoUtil.generateKey(deviceNumber)
+                val decryptedContent = CryptoUtil.decrypt(it.content, key)
+                it.copy(content = decryptedContent)
+            }
         }
     }
 
-    suspend fun getMessagesForConversation(senderPhoneNumber: String, recipientPhoneNumber: String): List<Message> {
+    suspend fun getMessagesForConversation(senderPhoneNumber: String, recipientPhoneNumber: String, deviceNumber: String): List<Message> {
         return withContext(Dispatchers.IO) {
             val realm = Realm.getDefaultInstance()
             val results = realm.where<RealmMessage>()
@@ -68,7 +76,11 @@ object DatabaseHelper {
                 .equalTo("recipient", senderPhoneNumber)
                 .endGroup()
                 .findAll()
-            val messages = realm.copyFromRealm(results).map { it.toMessage() }
+            val messages = realm.copyFromRealm(results).map {
+                val key: SecretKey = CryptoUtil.generateKey(deviceNumber)
+                val decryptedContent = CryptoUtil.decrypt(it.content, key)
+                it.toMessage().copy(content = decryptedContent)
+            }
             realm.close()
             messages
         }

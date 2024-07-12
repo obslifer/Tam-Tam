@@ -6,7 +6,7 @@ import com.example.tam_tam.models.Message
 object MessageHandler {
     private const val TAG = "MessageHandler"
 
-    fun handleReceivedMessage(message: Message, currentUserPhoneNumber: String) {
+    fun handleReceivedMessage(message: Message, currentUserPhoneNumber: String, currentDeviceNumber: String) {
         if (message.recipient == currentUserPhoneNumber) {
             Log.d(TAG, "Message received: ${message.content}")
             // Display or handle the message as needed
@@ -14,14 +14,14 @@ object MessageHandler {
         } else {
             if (message.relays.size < 10) {
                 message.relays.add(currentUserPhoneNumber)
-                NearbyService.sendMessageToAllEndpoints(message)
+                NearbyService.sendMessageToAllEndpoints(message, currentDeviceNumber)
             } else {
                 Log.d(TAG, "Message relay limit reached")
             }
         }
     }
 
-    fun sendMessageToRecipient(recipientPhoneNumber: String, content: String, currentUserPhoneNumber: String) {
+    fun sendMessageToRecipient(recipientPhoneNumber: String, content: String, currentUserPhoneNumber: String, currentDeviceNumber: String) {
         val message = Message(
             sender = currentUserPhoneNumber,
             recipient = recipientPhoneNumber,
@@ -29,7 +29,7 @@ object MessageHandler {
             timestamp = System.currentTimeMillis(),
             relays = mutableListOf()
         )
-        NearbyService.sendMessageToEndpoint(recipientPhoneNumber, message)
+        NearbyService.sendMessageToEndpoint(recipientPhoneNumber, message, currentDeviceNumber)
     }
 
     fun displayMessage(message: Message) {
