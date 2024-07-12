@@ -230,7 +230,7 @@ object NearbyService {
         }
     }
 
-    fun sendMessageToRecipient(message: Message, param: (Any) -> Unit) {
+    fun sendMessageToRecipient(message: Message) {
         CoroutineScope(Dispatchers.Main).launch {
             val recipientEndpoint = discoveredEndpoints.find { it.name == message.recipient }
             if (recipientEndpoint != null) {

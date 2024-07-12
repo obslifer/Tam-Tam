@@ -1,6 +1,7 @@
 package com.example.tam_tam.activities
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
@@ -66,10 +67,8 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun loadMessages() {
-        // This is just a placeholder. Implement the actual loading from your database.
         CoroutineScope(Dispatchers.Main).launch {
-            val messages =
-                DatabaseHelper.getMessagesForConversation(senderPhoneNumber, recipientPhoneNumber)
+            val messages = DatabaseHelper.getMessagesForConversation(senderPhoneNumber, recipientPhoneNumber)
             messageList.clear()
             messageList.addAll(messages)
             chatAdapter.notifyDataSetChanged()
@@ -78,18 +77,21 @@ class ChatActivity : AppCompatActivity() {
 
     private fun sendMessage(message: Message) {
         // This is just a placeholder. Implement the actual sending via NearbyService.
-        NearbyService.sendMessageToRecipient(message) { success ->
-            if (success as Boolean) {
-                // Add message to local list and update the adapter
-                messageList.add(message)
-                chatAdapter.notifyItemInserted(messageList.size - 1)
-                recyclerView.scrollToPosition(messageList.size - 1)
+        NearbyService.sendMessageToRecipient(message)
+        messageList.add(message)
 
-                // Save the message to the local database
-                CoroutineScope(Dispatchers.Main).launch {
-                    DatabaseHelper.saveMessage(message)
-                }
-            }
+        CoroutineScope(Dispatchers.Main).launch {
+            val messages =
+                DatabaseHelper.getMessagesForConversation(senderPhoneNumber, recipientPhoneNumber)
+            Log.d("message", messages.toString())
+        }
+
+        chatAdapter.notifyItemInserted(messageList.size - 1)
+        recyclerView.scrollToPosition(messageList.size - 1)
+
+        // Save the message to the local database
+        CoroutineScope(Dispatchers.Main).launch {
+            DatabaseHelper.saveMessage(message)
         }
     }
 }
