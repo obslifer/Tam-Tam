@@ -1,12 +1,15 @@
 package com.example.tam_tam.adapters
 
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.tam_tam.R
 import com.example.tam_tam.models.Message
+import com.squareup.picasso.Picasso
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,9 +53,18 @@ class ChatAdapter(private val messages: List<Message>, private val currentUserPh
     class SentMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.text_message_body)
         private val messageTimeTextView: TextView = itemView.findViewById(R.id.text_message_time)
+        private val messageImageView: ImageView = itemView.findViewById(R.id.image_message_body)
 
         fun bind(message: Message) {
-            messageTextView.text = message.content
+            if (message.imageUri != null) {
+                messageTextView.visibility = View.GONE
+                messageImageView.visibility = View.VISIBLE
+                Picasso.get().load(Uri.parse(message.imageUri)).into(messageImageView)
+            } else {
+                messageTextView.visibility = View.VISIBLE
+                messageImageView.visibility = View.GONE
+                messageTextView.text = message.content
+            }
             messageTimeTextView.text = formatDate(message.timestamp)
         }
     }
@@ -60,9 +72,18 @@ class ChatAdapter(private val messages: List<Message>, private val currentUserPh
     class ReceivedMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.text_message_body)
         private val messageTimeTextView: TextView = itemView.findViewById(R.id.text_message_time)
+        private val messageImageView: ImageView = itemView.findViewById(R.id.image_message_body)
 
         fun bind(message: Message) {
-            messageTextView.text = message.content
+            if (message.imageUri != null) {
+                messageTextView.visibility = View.GONE
+                messageImageView.visibility = View.VISIBLE
+                Picasso.get().load(Uri.parse(message.imageUri)).into(messageImageView)
+            } else {
+                messageTextView.visibility = View.VISIBLE
+                messageImageView.visibility = View.GONE
+                messageTextView.text = message.content
+            }
             messageTimeTextView.text = formatDate(message.timestamp)
         }
     }

@@ -20,10 +20,17 @@
 
         <EditText
             android:id="@+id/etMessage"
-            android:layout_width="0dp"
+            android:layout_width="279dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Message" />
+
+        <Button
+            android:id="@+id/btnPhoto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="+" />
 
         <Button
             android:id="@+id/btnSend"

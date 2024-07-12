@@ -17,7 +17,10 @@ data class Message(
     val timestamp: Long,
 
     @SerializedName("relays")
-    val relays: MutableList<String> = mutableListOf()
+    val relays: MutableList<String> = mutableListOf(),
+
+    @SerializedName("imageUri")
+    val imageUri: String? = null
 ) {
     companion object {
         private val gson = Gson()
