@@ -37,8 +37,8 @@ open class Contact(
 ) : RealmObject()
 
 open class RealmDiscoveredEndpoint(
-    @PrimaryKey var id: String = "",
-    var name: String = "",
+    var id: String = "",
+    @PrimaryKey var name: String = "",
     var available: Boolean = true
 ) : RealmObject() {
     fun toDiscoveredEndpoint(): NearbyService.DiscoveredEndpoint {

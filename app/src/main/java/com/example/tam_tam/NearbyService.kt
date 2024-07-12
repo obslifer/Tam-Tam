@@ -3,18 +3,20 @@ package com.example.tam_tam
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import com.example.tam_tam.models.Message
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.*
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @SuppressLint("StaticFieldLeak")
 object NearbyService {
     private const val TAG = "NearbyService"
-    private const val SERVICE_ID = "com.example.messenger.SERVICE_ID"
+    private const val SERVICE_ID = "com.example.tam_tam"
     private lateinit var context: Context
     private lateinit var currentUserPhoneNumber: String
 
@@ -29,7 +31,7 @@ object NearbyService {
     }
 
     private fun startDiscovery() {
-        val options = DiscoveryOptions.Builder().setStrategy(Strategy.P2P_POINT_TO_POINT).build()
+        val options = DiscoveryOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build()
         Nearby.getConnectionsClient(context)
             .startDiscovery(SERVICE_ID, endpointDiscoveryCallback, options)
             .addOnSuccessListener {
@@ -41,7 +43,7 @@ object NearbyService {
     }
 
     private fun startAdvertising() {
-        val options = AdvertisingOptions.Builder().setStrategy(Strategy.P2P_POINT_TO_POINT).build()
+        val options = AdvertisingOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build()
         Nearby.getConnectionsClient(context)
             .startAdvertising(
                 currentUserPhoneNumber,
@@ -57,19 +59,31 @@ object NearbyService {
             }
     }
 
+    fun stopAdvertising() {
+        Nearby.getConnectionsClient(context).stopAdvertising()
+    }
+
+    fun stopDiscovery() {
+        Nearby.getConnectionsClient(context).stopDiscovery()
+    }
+
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
             Log.i(TAG, "Endpoint found: $endpointId")
             val endpoint = DiscoveredEndpoint(endpointId, info.endpointName, true)
             CoroutineScope(Dispatchers.Main).launch {
                 DatabaseHelper.saveDiscoveredEndpoint(endpoint)
+                connectToEndpointWithRetry(endpointId, 3)
             }
         }
 
         override fun onEndpointLost(endpointId: String) {
             Log.d(TAG, "Endpoint lost: $endpointId")
             CoroutineScope(Dispatchers.Main).launch {
-                DatabaseHelper.saveDiscoveredEndpoint(DiscoveredEndpoint(endpointId, "", false))
+                val endpoint = DatabaseHelper.getDiscoveredEndpointById(endpointId)
+                if (endpoint != null) {
+                    DatabaseHelper.saveDiscoveredEndpoint(DiscoveredEndpoint(endpointId, endpoint.name, false))
+                }
             }
         }
     }
@@ -78,10 +92,7 @@ object NearbyService {
         CoroutineScope(Dispatchers.Main).launch {
             val endpoint = DatabaseHelper.getDiscoveredEndpointById(endpointId)
             if (endpoint != null && endpoint.available) {
-                connectToEndpoint(endpointId) {
-                    sendPayload(endpointId, message)
-                    disconnectFromEndpoint(endpointId)
-                }
+                sendPayloadWithRetry(endpointId, message, 3)
             } else {
                 Log.e(TAG, "Endpoint $endpointId not available")
             }
@@ -93,40 +104,55 @@ object NearbyService {
             val endpoints = DatabaseHelper.getAllDiscoveredEndpoints()
             endpoints.forEach { endpoint ->
                 if (endpoint.available) {
-                    connectToEndpoint(endpoint.id) {
-                        sendPayload(endpoint.id, message)
-                        disconnectFromEndpoint(endpoint.id)
-                    }
+                    sendPayloadWithRetry(endpoint.id, message, 3)
                 }
             }
         }
     }
 
-    private fun connectToEndpoint(endpointId: String, onSuccess: () -> Unit) {
+    private fun connectToEndpointWithRetry(endpointId: String, retries: Int) {
+        if (retries == 0) {
+            Log.e(TAG, "Connection failed after retries: $endpointId")
+            Toast.makeText(context, "Connection failed: $endpointId", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         Nearby.getConnectionsClient(context)
             .requestConnection(currentUserPhoneNumber, endpointId, connectionLifecycleCallback)
             .addOnSuccessListener {
                 Log.d(TAG, "Connection requested: $endpointId")
-                onSuccess()
             }
             .addOnFailureListener {
                 Log.e(TAG, "Connection request failed: $endpointId", it)
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(1000) // Wait for 1 second before retrying
+                    connectToEndpointWithRetry(endpointId, retries - 1)
+                }
             }
     }
 
-    private fun disconnectFromEndpoint(endpointId: String) {
-        Nearby.getConnectionsClient(context).disconnectFromEndpoint(endpointId)
-        Log.d(TAG, "Disconnected from endpoint: $endpointId")
-    }
+    private fun sendPayloadWithRetry(endpointId: String, message: Message, retries: Int) {
+        if (retries == 0) {
+            Log.e(TAG, "Payload send failed after retries: $endpointId")
+            Toast.makeText(context, "Message send failed: $endpointId", Toast.LENGTH_SHORT).show()
+            startDiscovery()
+            return
+        }
 
-    private fun sendPayload(endpointId: String, message: Message) {
         val payload = Payload.fromBytes(serializeMessage(message))
         Nearby.getConnectionsClient(context).sendPayload(endpointId, payload)
             .addOnSuccessListener {
                 Log.d(TAG, "Payload sent to: $endpointId")
+                CoroutineScope(Dispatchers.Main).launch {
+                    DatabaseHelper.saveMessage(message)
+                }
             }
             .addOnFailureListener {
                 Log.e(TAG, "Payload send failed to: $endpointId", it)
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(1000) // Wait for 1 second before retrying
+                    sendPayloadWithRetry(endpointId, message, retries - 1)
+                }
             }
     }
 
@@ -139,6 +165,10 @@ object NearbyService {
                 }
                 .addOnFailureListener {
                     Log.e(TAG, "Connection acceptance failed: $endpointId", it)
+                    CoroutineScope(Dispatchers.Main).launch {
+                        delay(1000) // Wait for 1 second before retrying
+                        connectToEndpointWithRetry(endpointId, 3)
+                    }
                 }
         }
 
@@ -146,17 +176,27 @@ object NearbyService {
             if (result.status.isSuccess) {
                 Log.d(TAG, "Connected to endpoint: $endpointId")
                 CoroutineScope(Dispatchers.Main).launch {
-                    DatabaseHelper.saveDiscoveredEndpoint(DiscoveredEndpoint(endpointId, "", false))
+                    val endpoint = DatabaseHelper.getDiscoveredEndpointById(endpointId)
+                    if (endpoint != null) {
+                        DatabaseHelper.saveDiscoveredEndpoint(DiscoveredEndpoint(endpointId, endpoint.name, true))
+                    }
                 }
             } else {
                 Log.e(TAG, "Connection failed: $endpointId")
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(1000) // Wait for 1 second before retrying
+                    connectToEndpointWithRetry(endpointId, 3)
+                }
             }
         }
 
         override fun onDisconnected(endpointId: String) {
             Log.d(TAG, "Disconnected from endpoint: $endpointId")
             CoroutineScope(Dispatchers.Main).launch {
-                DatabaseHelper.saveDiscoveredEndpoint(DiscoveredEndpoint(endpointId, "", true))
+                val endpoint = DatabaseHelper.getDiscoveredEndpointById(endpointId)
+                if (endpoint != null) {
+                    DatabaseHelper.saveDiscoveredEndpoint(DiscoveredEndpoint(endpointId, endpoint.name, false))
+                }
             }
         }
     }
@@ -177,9 +217,20 @@ object NearbyService {
 
     private fun handleMessage(message: Message) {
         CoroutineScope(Dispatchers.Main).launch {
+            // Save message
             DatabaseHelper.saveMessage(message)
+
+            // Check if the message is for the current user
             if (message.recipient == currentUserPhoneNumber) {
                 Log.d(TAG, "Message received: ${message.content}")
+
+                // Check if sender is in contacts
+                val contact = DatabaseHelper.getContact(message.sender)
+                if (contact == null) {
+                    // If not in contacts, save as unknown contact
+                    DatabaseHelper.saveContact(message.sender, "Inconnu")
+                }
+
                 // Display or handle the message as needed
             } else {
                 if (message.relays.size < 10) {
@@ -192,37 +243,12 @@ object NearbyService {
         }
     }
 
-    /*fun sendMessageToRecipient(recipientPhoneNumber: String, content: String, currentUserPhoneNumber: String) {
-        val message = Message(
-            sender = currentUserPhoneNumber,
-            recipient = recipientPhoneNumber,
-            content = content,
-            timestamp = System.currentTimeMillis(),
-            relays = mutableListOf()
-        )
-
-        // Rechercher l'endpointId correspondant au numéro de téléphone du destinataire
-        val recipientEndpoint = DatabaseHelper.getDiscoveredEndpointByName(recipientPhoneNumber)
-
-        if (recipientEndpoint != null) {
-            // Si un endpointId est trouvé, envoyer le message à cet endpoint
-            sendMessageToEndpoint(recipientEndpoint.id, message)
-        } else {
-            // Si aucun endpointId n'est trouvé, envoyer le message à tous les endpoints
-            sendMessageToAllEndpoints(message)
-        }
-    }*/
-
     fun sendMessageToRecipient(message: Message, param: (Any) -> Unit) {
-        // Rechercher l'endpointId correspondant au numéro de téléphone du destinataire
         CoroutineScope(Dispatchers.Main).launch {
             val recipientEndpoint = DatabaseHelper.getDiscoveredEndpointByName(message.recipient)
-
             if (recipientEndpoint != null) {
-                // Si un endpointId est trouvé, envoyer le message à cet endpoint
                 sendMessageToEndpoint(recipientEndpoint.id, message)
             } else {
-                // Si aucun endpointId n'est trouvé, envoyer le message à tous les endpoints
                 sendMessageToAllEndpoints(message)
             }
         }
@@ -231,13 +257,11 @@ object NearbyService {
     private val gson = Gson()
 
     private fun serializeMessage(message: Message): ByteArray {
-        // Serialize the message object to a byte array using JSON
         val json = gson.toJson(message)
         return json.toByteArray(Charsets.UTF_8)
     }
 
     private fun deserializeMessage(data: ByteArray): Message {
-        // Deserialize the byte array back to a message object using JSON
         val json = String(data, Charsets.UTF_8)
         return gson.fromJson(json, Message::class.java)
     }

@@ -7,6 +7,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.tam_tam.R
 import com.example.tam_tam.models.Message
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ChatAdapter(private val messages: List<Message>, private val currentUserPhoneNumber: String) :
     RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -47,17 +49,28 @@ class ChatAdapter(private val messages: List<Message>, private val currentUserPh
 
     class SentMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.text_message_body)
+        private val messageTimeTextView: TextView = itemView.findViewById(R.id.text_message_time)
 
         fun bind(message: Message) {
             messageTextView.text = message.content
+            messageTimeTextView.text = formatDate(message.timestamp)
         }
     }
 
     class ReceivedMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.text_message_body)
+        private val messageTimeTextView: TextView = itemView.findViewById(R.id.text_message_time)
 
         fun bind(message: Message) {
             messageTextView.text = message.content
+            messageTimeTextView.text = formatDate(message.timestamp)
+        }
+    }
+
+    companion object {
+        private fun formatDate(timestamp: Long): String {
+            val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+            return sdf.format(Date(timestamp))
         }
     }
 }
