@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -23,12 +22,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.Manifest
-import com.google.android.gms.nearby.Nearby
-import com.google.android.gms.nearby.connection.Payload
-import java.io.File
-import java.io.FileNotFoundException
-import java.io.InputStream
-import java.nio.charset.StandardCharsets
 
 class ChatActivity : AppCompatActivity() {
 
@@ -170,7 +163,7 @@ class ChatActivity : AppCompatActivity() {
             messageList.addAll(messages)
             chatAdapter.notifyDataSetChanged()
 
-            Log.d("messages", messageList.toString())
+            Log.d("messages", messages.toString())
         }
     }
 
@@ -182,13 +175,14 @@ class ChatActivity : AppCompatActivity() {
             content = "",
             timestamp = System.currentTimeMillis(),
             relays = mutableListOf(),
-            imageUri = uri
+            imageUri = uri.toString()
         )
         messageList.add(message)
+        Log.e("image to send", "message: $message")
 
         CoroutineScope(Dispatchers.Main).launch {
             // Save the message to the local database
-            DatabaseHelper.saveMessage(message, message.recipient)
+            //DatabaseHelper.saveMessage(message, message.recipient)
         }
 
         chatAdapter.notifyItemInserted(messageList.size - 1)
@@ -202,7 +196,7 @@ class ChatActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.Main).launch {
             // Save the message to the local database
-            DatabaseHelper.saveMessage(message, message.recipient)
+            //DatabaseHelper.saveMessage(message, message.recipient)
         }
 
         chatAdapter.notifyItemInserted(messageList.size - 1)

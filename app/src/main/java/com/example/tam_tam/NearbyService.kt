@@ -102,9 +102,9 @@ object NearbyService {
         CoroutineScope(Dispatchers.Main).launch {
             val endpoint = discoveredEndpoints.find { it.id == endpointId }
             if (endpoint != null && endpoint.available) {
-                //sendPayloadWithRetry(endpointId, message, deviceNumber, 3)
-                val payload = Payload.fromBytes(serializeMessage(message))
-                sendPayloadWithRetry(endpointId, payload, deviceNumber, 3)
+                sendPayloadWithRetry(endpointId, message, deviceNumber, 3)
+                //val payload = Payload.fromBytes(serializeMessage(message))
+                //sendPayloadWithRetry(endpointId, payload, deviceNumber, 3)
             } else {
                 Log.e(TAG, "Endpoint $endpointId not available")
             }
@@ -365,8 +365,9 @@ object NearbyService {
                             content = "",
                             timestamp = System.currentTimeMillis(),
                             relays = mutableListOf(),
-                            imageUri = uri
+                            imageUri = uri.toString()
                         )
+                        Log.e("image to send", "message: $message")
                         sendMessageToRecipient(message)
                 }
         }

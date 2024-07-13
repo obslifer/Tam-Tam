@@ -33,6 +33,7 @@ object DatabaseHelper {
             //val realmMessage = RealmMessage.fromMessage(message.copy(content = encryptedContent))
             val realmMessage = RealmMessage.fromMessage(message)
             val realm = Realm.getDefaultInstance()
+            Log.e("save image", "message: $RealmMessage")
             realm.executeTransaction { it.insertOrUpdate(realmMessage) }
             realm.close()
         }
@@ -80,6 +81,7 @@ object DatabaseHelper {
                 .findAll()
             val messages = realm.copyFromRealm(results).map { it.toMessage() }
             realm.close()
+            Log.e("list of messages", "messages: $messages")
             messages
         }
     }

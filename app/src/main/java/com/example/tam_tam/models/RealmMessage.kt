@@ -11,10 +11,11 @@ open class RealmMessage(
     var recipient: String = "",
     var content: String = "",
     var timestamp: Long = 0L,
-    var relays: String = ""
+    var relays: String = "",
+    var imageUri: String? = ""
 ) : RealmObject() {
     fun toMessage(): Message {
-        return Message(sender, recipient, content, timestamp, relays.split(",").toMutableList())
+        return Message(sender, recipient, content, timestamp, relays.split(",").toMutableList(), imageUri)
     }
 
     companion object {
@@ -25,7 +26,8 @@ open class RealmMessage(
                 recipient = message.recipient,
                 content = message.content,
                 timestamp = message.timestamp,
-                relays = message.relays.joinToString(",")
+                relays = message.relays.joinToString(",") ,
+                imageUri = message.imageUri
             )
         }
     }
