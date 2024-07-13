@@ -9,8 +9,9 @@ import com.example.tam_tam.R
 import com.example.tam_tam.models.Contact
 
 class ContactsAdapter(
-    private var contacts: MutableList<Contact>, // Utilisation d'une liste mutable
-    private val clickListener: (Contact) -> Unit
+    private var contacts: MutableList<Contact>,
+    private val clickListener: (Contact) -> Unit,
+    private val longClickListener: (Contact) -> Unit // Ajouter le longClickListener
 ) : RecyclerView.Adapter<ContactsAdapter.ContactViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ContactViewHolder {
@@ -19,7 +20,7 @@ class ContactsAdapter(
     }
 
     override fun onBindViewHolder(holder: ContactViewHolder, position: Int) {
-        holder.bind(contacts[position], clickListener)
+        holder.bind(contacts[position], clickListener, longClickListener) // Passer longClickListener à bind
     }
 
     override fun getItemCount(): Int = contacts.size
@@ -34,10 +35,15 @@ class ContactsAdapter(
         private val tvContactName: TextView = itemView.findViewById(R.id.tvContactName)
         private val tvContactPhone: TextView = itemView.findViewById(R.id.tvContactPhone)
 
-        fun bind(contact: Contact, clickListener: (Contact) -> Unit) {
+        fun bind(contact: Contact, clickListener: (Contact) -> Unit, longClickListener: (Contact) -> Unit) {
             tvContactName.text = contact.name
             tvContactPhone.text = contact.phoneNumber
+
             itemView.setOnClickListener { clickListener(contact) }
+            itemView.setOnLongClickListener {
+                longClickListener(contact)
+                true // Consume the long click event
+            }
         }
     }
 }

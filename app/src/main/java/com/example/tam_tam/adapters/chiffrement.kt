@@ -46,9 +46,15 @@ object CryptoUtil {
      * @return Données déchiffrées sous forme de chaîne.
      */
     fun decrypt(data: String, key: SecretKey): String {
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, key)
-        val decryptedBytes = cipher.doFinal(Base64.decode(data, Base64.DEFAULT))
-        return String(decryptedBytes, Charsets.UTF_8)
+        try {
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            cipher.init(Cipher.DECRYPT_MODE, key)
+            val decryptedBytes = cipher.doFinal(Base64.decode(data, Base64.DEFAULT))
+            return String(decryptedBytes, Charsets.UTF_8)
+        } catch (e: Exception) {
+            // Gérer les exceptions spécifiques et loguer l'erreur
+            e.printStackTrace()
+            throw RuntimeException("Erreur lors du déchiffrement : ${e.message}")
+        }
     }
 }

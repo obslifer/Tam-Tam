@@ -1,6 +1,7 @@
 package com.example.tam_tam
 
 import android.content.Context
+import android.util.Log
 import com.example.tam_tam.adapters.CryptoUtil
 import com.example.tam_tam.models.Contact
 import com.example.tam_tam.models.Message
@@ -63,28 +64,38 @@ object DatabaseHelper {
     suspend fun getMessagesForConversation(senderPhoneNumber: String, recipientPhoneNumber: String, deviceNumber: String): List<Message> {
         return withContext(Dispatchers.IO) {
             val realm = Realm.getDefaultInstance()
-            val results = realm.where<RealmMessage>()
-                .beginGroup()
-                .equalTo("sender", senderPhoneNumber)
-                .and()
-                .equalTo("recipient", recipientPhoneNumber)
-                .endGroup()
-                .or()
-                .beginGroup()
-                .equalTo("sender", recipientPhoneNumber)
-                .and()
-                .equalTo("recipient", senderPhoneNumber)
-                .endGroup()
-                .findAll()
-            val messages = realm.copyFromRealm(results).map {
-                val key: SecretKey = CryptoUtil.generateKey(deviceNumber)
-                val decryptedContent = CryptoUtil.decrypt(it.content, key)
-                it.toMessage().copy(content = decryptedContent)
+            try {
+                val results = realm.where<RealmMessage>()
+                    .beginGroup()
+                    .equalTo("sender", senderPhoneNumber)
+                    .and()
+                    .equalTo("recipient", recipientPhoneNumber)
+                    .endGroup()
+                    .or()
+                    .beginGroup()
+                    .equalTo("sender", recipientPhoneNumber)
+                    .and()
+                    .equalTo("recipient", senderPhoneNumber)
+                    .endGroup()
+                    .findAll()
+                val messages = realm.copyFromRealm(results).map {
+                    try {
+                        val key: SecretKey = CryptoUtil.generateKey(deviceNumber)
+                        val decryptedContent = CryptoUtil.decrypt(it.content, key)
+                        it.toMessage().copy(content = decryptedContent)
+                    } catch (e: Exception) {
+                        // Log or handle decryption error
+                        Log.e("CryptoUtil", "Error decrypting message content", e)
+                        it.toMessage() // Return as-is or handle error case
+                    }
+                }
+                messages
+            } finally {
+                realm.close()
             }
-            realm.close()
-            messages
         }
     }
+
 
     suspend fun deleteMessage(id: String) {
         withContext(Dispatchers.IO) {
@@ -99,9 +110,19 @@ object DatabaseHelper {
 
     suspend fun saveContact(phoneNumber: String, name: String) {
         withContext(Dispatchers.IO) {
-            val contact = Contact(phoneNumber, name)
             val realm = Realm.getDefaultInstance()
-            realm.executeTransaction { it.insertOrUpdate(contact) }
+            val existingContact = realm.where(Contact::class.java).equalTo("phoneNumber", phoneNumber).findFirst()
+
+            realm.executeTransaction { transactionRealm ->
+                if (existingContact != null) {
+                    // Update the existing contact's name
+                    existingContact.name = name
+                } else {
+                    // Create a new contact if it doesn't exist
+                    val newContact = Contact(phoneNumber, name)
+                    transactionRealm.insertOrUpdate(newContact)
+                }
+            }
             realm.close()
         }
     }
