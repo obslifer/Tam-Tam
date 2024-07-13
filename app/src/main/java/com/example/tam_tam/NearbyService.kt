@@ -12,6 +12,10 @@ import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileDescriptor
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
 
 @SuppressLint("StaticFieldLeak")
@@ -20,6 +24,7 @@ object NearbyService {
     private const val SERVICE_ID = "com.example.tam_tam"
     private lateinit var context: Context
     private lateinit var currentUserPhoneNumber: String
+    private val incomingFilePayloads = mutableMapOf<Long, String>()
     val discoveredEndpoints = mutableListOf<DiscoveredEndpoint>()
 
     data class DiscoveredEndpoint(val id: String, val name: String, var available: Boolean)
@@ -98,7 +103,8 @@ object NearbyService {
             val endpoint = discoveredEndpoints.find { it.id == endpointId }
             if (endpoint != null && endpoint.available) {
                 //sendPayloadWithRetry(endpointId, message, deviceNumber, 3)
-                sendPayloadWithRetry(endpointId, Payload.fromBytes(serializeMessage(message)), deviceNumber, 3)
+                val payload = Payload.fromBytes(serializeMessage(message))
+                sendPayloadWithRetry(endpointId, payload, deviceNumber, 3)
             } else {
                 Log.e(TAG, "Endpoint $endpointId not available")
             }
@@ -111,9 +117,10 @@ object NearbyService {
                 if (!message.relays.contains(endpoint.name)) {
                     if (endpoint.available) {
                         //sendPayloadWithRetry(endpoint.id, message, deviceNumber, 3)
+                        val payload = Payload.fromBytes(serializeMessage(message))
                         sendPayloadWithRetry(
                             endpoint.id,
-                            Payload.fromBytes(serializeMessage(message)),
+                            payload,
                             deviceNumber,
                             2
                         )
@@ -141,7 +148,7 @@ object NearbyService {
             }
     }
 
-    /*private fun sendPayloadWithRetry(endpointId: String, message: Message, deviceNumber: String, retryCount: Int) {
+    private fun sendPayloadWithRetry(endpointId: String, message: Message, deviceNumber: String, retryCount: Int) {
         if (retryCount <= 0) {
             Log.e(TAG, "Payload send retries exhausted for endpoint: $endpointId")
             Toast.makeText(context, "Failed to send message to endpoint: $endpointId", Toast.LENGTH_SHORT).show()
@@ -160,7 +167,7 @@ object NearbyService {
                 Log.e(TAG, "Payload send failed to: $endpointId", it)
                 sendPayloadWithRetry(endpointId, message, deviceNumber, retryCount - 1)
             }
-    }*/
+    }
 
     private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(endpointId: String, connectionInfo: ConnectionInfo) {
@@ -207,8 +214,15 @@ object NearbyService {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
             if (payload.type == Payload.Type.BYTES) {
                 val receivedBytes = payload.asBytes()!!
-                val message = deserializeMessage(receivedBytes)
-                handleMessage(message)
+                try {
+                    val message = deserializeMessage(receivedBytes)
+                    handleMessage(message)
+                } catch (e: Exception) {
+                    Log.e("error", e.toString())
+                    handleBytesPayload(endpointId, payload)
+                }
+            } else if (payload.type == Payload.Type.FILE) {
+                handleFilePayload(endpointId, payload)
             }
         }
 
@@ -230,6 +244,7 @@ object NearbyService {
                 val contact = DatabaseHelper.getContact(message.sender)
                 if (contact == null) {
                     // If not in contacts, save as unknown contact
+                    Log.d(TAG, "Message from inconu received: ${message.content}")
                     DatabaseHelper.saveContact(message.sender, "Inconnu")
                 }
 
@@ -242,22 +257,42 @@ object NearbyService {
                     Log.d(TAG, "Message relay limit reached")
                 }
             }
-            // Check if the message is a general message (recipient is "0")
-            if (message.recipient == "0") {
-                Log.d(TAG, "General message received: ${message.content}")
-
-                message.recipient = currentUserPhoneNumber
-
-                // Check if sender is in contacts
-                val contact = DatabaseHelper.getContact(message.sender)
-                if (contact == null) {
-                    // If not in contacts, save as unknown contact
-                    DatabaseHelper.saveContact(message.sender, "Inconnu")
-                }
-
-                DatabaseHelper.saveMessage(message, currentUserPhoneNumber)
-            }
         }
+    }
+
+    private fun handleBytesPayload(endpointId: String, payload: Payload) {
+        val message = String(payload.asBytes()!!, StandardCharsets.UTF_8)
+        val parts = message.split(":")
+        if (parts.size == 2) {
+            val payloadId = parts[0].toLong()
+            val fileName = parts[1]
+            Log.d(TAG, "Received filename message: $fileName with payload ID: $payloadId")
+            incomingFilePayloads[payloadId] = fileName
+        }
+    }
+
+    private fun handleFilePayload(endpointId: String, payload: Payload) {
+        val file = payload.asFile()!!.asParcelFileDescriptor().fileDescriptor
+        val payloadId = payload.id
+        if (incomingFilePayloads.containsKey(payloadId)) {
+            val fileName = incomingFilePayloads[payloadId]
+            Log.d(TAG, "Received file: $fileName")
+            saveReceivedFile(file, fileName!!)
+        }
+    }
+
+    private fun saveReceivedFile(file: FileDescriptor, fileName: String) {
+        val inputStream = FileInputStream(file)
+        val outputFile = File(context.cacheDir, fileName)
+        val outputStream = FileOutputStream(outputFile)
+
+        inputStream.copyTo(outputStream)
+
+        inputStream.close()
+        outputStream.close()
+
+        val fileUri = Uri.fromFile(outputFile)
+        Log.d(TAG, "Saved received file to: $fileUri")
     }
 
     fun sendMessageToRecipient(message: Message) {
@@ -277,7 +312,7 @@ object NearbyService {
             messages.forEach { message ->
                 val endpoint = discoveredEndpoints.find { it.id == endpointId }
                 if (endpoint != null) {
-                    if (message.recipient != currentUserPhoneNumber && !message.relays.contains(endpoint.name) && !message.relays.contains(endpoint.name)) {
+                    if (message.recipient != currentUserPhoneNumber && !message.relays.contains(endpoint.name) && message.sender != endpoint.name && message.recipient != endpoint.name) {
                         //sendMessageToEndpoint(endpointId, message, currentUserPhoneNumber)
                         //sendPayloadWithRetry(endpoint.id, message, deviceNumber, 3)
                         sendPayloadWithRetry(
@@ -321,9 +356,9 @@ object NearbyService {
             val filenameMessage = filePayload?.id.toString() + ":" + uri.lastPathSegment
             val filenameBytesPayload = Payload.fromBytes(filenameMessage.toByteArray(StandardCharsets.UTF_8))
 
-            sendPayloadWithRetry(endpointId, filenameBytesPayload, recipient, 3) {
+            sendPayloadWithRetry(endpointId, filenameBytesPayload, recipient, 3)
                 if (filePayload != null) {
-                    sendPayloadWithRetry(endpointId, filePayload, recipient, 3) {
+                    sendPayloadWithRetry(endpointId, filePayload, recipient, 3)
                         val message = Message(
                             sender = currentUserPhoneNumber,
                             recipient = recipient,
@@ -333,13 +368,11 @@ object NearbyService {
                             imageUri = uri
                         )
                         sendMessageToRecipient(message)
-                    }
                 }
-            }
         }
     }
 
-    private fun sendPayloadWithRetry(endpointId: String, payload: Payload, recipient: String, retryCount: Int, onSuccess: () -> Unit = {}) {
+    private fun sendPayloadWithRetry(endpointId: String, payload: Payload, recipient: String, retryCount: Int) {
         if (retryCount <= 0) {
             Log.e(TAG, "Payload send retries exhausted for endpoint: $endpointId")
             Toast.makeText(context, "Failed to send payload to endpoint: $endpointId", Toast.LENGTH_SHORT).show()
@@ -348,12 +381,11 @@ object NearbyService {
 
         Nearby.getConnectionsClient(context).sendPayload(endpointId, payload)
             .addOnSuccessListener {
-                Log.d(TAG, "Payload sent to: $endpointId")
-                onSuccess()
+                Log.d(TAG, "sendPayloadWithRetry : Payload sent to: $endpointId")
             }
             .addOnFailureListener {
                 Log.e(TAG, "Payload send failed to: $endpointId", it)
-                sendPayloadWithRetry(endpointId, payload, recipient, retryCount - 1, onSuccess)
+                sendPayloadWithRetry(endpointId, payload, recipient, retryCount - 1)
             }
     }
 

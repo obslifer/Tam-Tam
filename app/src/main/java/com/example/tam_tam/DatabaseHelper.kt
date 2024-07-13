@@ -62,38 +62,25 @@ object DatabaseHelper {
         }
     }
 
-    suspend fun getMessagesForConversation(senderPhoneNumber: String, recipientPhoneNumber: String, deviceNumber: String): List<Message> {
+    suspend fun getMessagesForConversation(senderPhoneNumber: String, recipientPhoneNumber: String): List<Message> {
         return withContext(Dispatchers.IO) {
             val realm = Realm.getDefaultInstance()
-            try {
-                val results = realm.where<RealmMessage>()
-                    .beginGroup()
-                    .equalTo("sender", senderPhoneNumber)
-                    .and()
-                    .equalTo("recipient", recipientPhoneNumber)
-                    .endGroup()
-                    .or()
-                    .beginGroup()
-                    .equalTo("sender", recipientPhoneNumber)
-                    .and()
-                    .equalTo("recipient", senderPhoneNumber)
-                    .endGroup()
-                    .findAll()
-                val messages = realm.copyFromRealm(results).map {
-                    try {
-                        val key: SecretKey = CryptoUtil.generateKey(deviceNumber)
-                        val decryptedContent = CryptoUtil.decrypt(it.content, key)
-                        it.toMessage().copy(content = decryptedContent)
-                    } catch (e: Exception) {
-                        // Log or handle decryption error
-                        Log.e("CryptoUtil", "Error decrypting message content", e)
-                        it.toMessage() // Return as-is or handle error case
-                    }
-                }
-                messages
-            } finally {
-                realm.close()
-            }
+            val results = realm.where<RealmMessage>()
+                .beginGroup()
+                .equalTo("sender", senderPhoneNumber)
+                .and()
+                .equalTo("recipient", recipientPhoneNumber)
+                .endGroup()
+                .or()
+                .beginGroup()
+                .equalTo("sender", recipientPhoneNumber)
+                .and()
+                .equalTo("recipient", senderPhoneNumber)
+                .endGroup()
+                .findAll()
+            val messages = realm.copyFromRealm(results).map { it.toMessage() }
+            realm.close()
+            messages
         }
     }
 

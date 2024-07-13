@@ -165,7 +165,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun loadMessages() {
         CoroutineScope(Dispatchers.Main).launch {
-            val messages = DatabaseHelper.getMessagesForConversation(senderPhoneNumber, recipientPhoneNumber, currentDeviceNumber)
+            val messages = DatabaseHelper.getMessagesForConversation(senderPhoneNumber, recipientPhoneNumber)
             messageList.clear()
             messageList.addAll(messages)
             chatAdapter.notifyDataSetChanged()

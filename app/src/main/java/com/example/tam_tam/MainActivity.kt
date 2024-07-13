@@ -86,7 +86,10 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.ACCESS_FINE_LOCATION
                 )
             } else if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_ADVERTISE,
+                    Manifest.permission.BLUETOOTH_CONNECT)
             } else {
                 arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION)
             }
