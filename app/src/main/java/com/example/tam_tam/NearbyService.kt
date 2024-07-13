@@ -2,6 +2,7 @@ package com.example.tam_tam
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import com.example.tam_tam.models.Message
@@ -11,6 +12,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.nio.charset.StandardCharsets
 
 @SuppressLint("StaticFieldLeak")
 object NearbyService {
@@ -18,7 +20,7 @@ object NearbyService {
     private const val SERVICE_ID = "com.example.tam_tam"
     private lateinit var context: Context
     private lateinit var currentUserPhoneNumber: String
-    private val discoveredEndpoints = mutableListOf<DiscoveredEndpoint>()
+    val discoveredEndpoints = mutableListOf<DiscoveredEndpoint>()
 
     data class DiscoveredEndpoint(val id: String, val name: String, var available: Boolean)
 
@@ -95,7 +97,8 @@ object NearbyService {
         CoroutineScope(Dispatchers.Main).launch {
             val endpoint = discoveredEndpoints.find { it.id == endpointId }
             if (endpoint != null && endpoint.available) {
-                sendPayloadWithRetry(endpointId, message, deviceNumber, 3)
+                //sendPayloadWithRetry(endpointId, message, deviceNumber, 3)
+                sendPayloadWithRetry(endpointId, Payload.fromBytes(serializeMessage(message)), deviceNumber, 3)
             } else {
                 Log.e(TAG, "Endpoint $endpointId not available")
             }
@@ -105,8 +108,16 @@ object NearbyService {
     fun sendMessageToAllEndpoints(message: Message, deviceNumber: String) {
         CoroutineScope(Dispatchers.Main).launch {
             discoveredEndpoints.forEach { endpoint ->
-                if (endpoint.available) {
-                    sendPayloadWithRetry(endpoint.id, message, deviceNumber, 3)
+                if (!message.relays.contains(endpoint.name)) {
+                    if (endpoint.available) {
+                        //sendPayloadWithRetry(endpoint.id, message, deviceNumber, 3)
+                        sendPayloadWithRetry(
+                            endpoint.id,
+                            Payload.fromBytes(serializeMessage(message)),
+                            deviceNumber,
+                            3
+                        )
+                    }
                 }
             }
         }
@@ -130,7 +141,7 @@ object NearbyService {
             }
     }
 
-    private fun sendPayloadWithRetry(endpointId: String, message: Message, deviceNumber: String, retryCount: Int) {
+    /*private fun sendPayloadWithRetry(endpointId: String, message: Message, deviceNumber: String, retryCount: Int) {
         if (retryCount <= 0) {
             Log.e(TAG, "Payload send retries exhausted for endpoint: $endpointId")
             Toast.makeText(context, "Failed to send message to endpoint: $endpointId", Toast.LENGTH_SHORT).show()
@@ -149,7 +160,7 @@ object NearbyService {
                 Log.e(TAG, "Payload send failed to: $endpointId", it)
                 sendPayloadWithRetry(endpointId, message, deviceNumber, retryCount - 1)
             }
-    }
+    }*/
 
     private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(endpointId: String, connectionInfo: ConnectionInfo) {
@@ -171,6 +182,8 @@ object NearbyService {
                     if (endpoint != null) {
                         endpoint.available = true
                         DatabaseHelper.saveDiscoveredEndpoint(endpoint)
+                        // Send all messages not for the current user
+                        sendAllMessagesToEndpoint(endpoint.id)
                     }
                 }
             } else {
@@ -258,6 +271,27 @@ object NearbyService {
         }
     }
 
+    private fun sendAllMessagesToEndpoint(endpointId: String) {
+        CoroutineScope(Dispatchers.Main).launch {
+            val messages = DatabaseHelper.getMessages()
+            messages.forEach { message ->
+                val endpoint = discoveredEndpoints.find { it.id == endpointId }
+                if (endpoint != null) {
+                    if (message.recipient != currentUserPhoneNumber && !message.relays.contains(endpoint.name) && !message.relays.contains(endpoint.name)) {
+                        //sendMessageToEndpoint(endpointId, message, currentUserPhoneNumber)
+                        //sendPayloadWithRetry(endpoint.id, message, deviceNumber, 3)
+                        sendPayloadWithRetry(
+                            endpointId,
+                            Payload.fromBytes(serializeMessage(message)),
+                            currentUserPhoneNumber,
+                            2
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     private val gson = Gson()
 
     private fun serializeMessage(message: Message): ByteArray {
@@ -269,4 +303,58 @@ object NearbyService {
         val json = bytes.toString(Charsets.UTF_8)
         return gson.fromJson(json, Message::class.java)
     }
+
+    // pour les images
+    fun sendImageToRecipient(uri: Uri, recipient: String) {
+        val endpoint = discoveredEndpoints.find { it.name == recipient }
+        if (endpoint != null) {
+            sendImageToEndpoint(endpoint.id, uri, recipient)
+        } else {
+            Log.e(TAG, "No endpoint found for recipient: $recipient")
+        }
+    }
+
+    private fun sendImageToEndpoint(endpointId: String, uri: Uri, recipient: String) {
+        CoroutineScope(Dispatchers.Main).launch {
+            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+            val filePayload = pfd?.let { Payload.fromFile(it) }
+            val filenameMessage = filePayload?.id.toString() + ":" + uri.lastPathSegment
+            val filenameBytesPayload = Payload.fromBytes(filenameMessage.toByteArray(StandardCharsets.UTF_8))
+
+            sendPayloadWithRetry(endpointId, filenameBytesPayload, recipient, 3) {
+                if (filePayload != null) {
+                    sendPayloadWithRetry(endpointId, filePayload, recipient, 3) {
+                        val message = Message(
+                            sender = currentUserPhoneNumber,
+                            recipient = recipient,
+                            content = "",
+                            timestamp = System.currentTimeMillis(),
+                            relays = mutableListOf(),
+                            imageUri = uri
+                        )
+                        sendMessageToRecipient(message)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun sendPayloadWithRetry(endpointId: String, payload: Payload, recipient: String, retryCount: Int, onSuccess: () -> Unit = {}) {
+        if (retryCount <= 0) {
+            Log.e(TAG, "Payload send retries exhausted for endpoint: $endpointId")
+            Toast.makeText(context, "Failed to send payload to endpoint: $endpointId", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Nearby.getConnectionsClient(context).sendPayload(endpointId, payload)
+            .addOnSuccessListener {
+                Log.d(TAG, "Payload sent to: $endpointId")
+                onSuccess()
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "Payload send failed to: $endpointId", it)
+                sendPayloadWithRetry(endpointId, payload, recipient, retryCount - 1, onSuccess)
+            }
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.example.tam_tam.models
 
+import android.net.Uri
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 
@@ -20,7 +21,7 @@ data class Message(
     val relays: MutableList<String> = mutableListOf(),
 
     @SerializedName("imageUri")
-    val imageUri: String? = null
+    val imageUri: Uri? = null
 ) {
     companion object {
         private val gson = Gson()

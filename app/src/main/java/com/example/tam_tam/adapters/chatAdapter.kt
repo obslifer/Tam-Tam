@@ -59,7 +59,7 @@ class ChatAdapter(private val messages: List<Message>, private val currentUserPh
             if (message.imageUri != null) {
                 messageTextView.visibility = View.GONE
                 messageImageView.visibility = View.VISIBLE
-                Picasso.get().load(Uri.parse(message.imageUri)).into(messageImageView)
+                Picasso.get().load(Uri.parse(message.imageUri.toString())).into(messageImageView)
             } else {
                 messageTextView.visibility = View.VISIBLE
                 messageImageView.visibility = View.GONE
@@ -78,7 +78,7 @@ class ChatAdapter(private val messages: List<Message>, private val currentUserPh
             if (message.imageUri != null) {
                 messageTextView.visibility = View.GONE
                 messageImageView.visibility = View.VISIBLE
-                Picasso.get().load(Uri.parse(message.imageUri)).into(messageImageView)
+                Picasso.get().load(Uri.parse(message.imageUri.toString())).into(messageImageView)
             } else {
                 messageTextView.visibility = View.VISIBLE
                 messageImageView.visibility = View.GONE

@@ -15,28 +15,7 @@
               </deviceKey>
             </Target>
           </targetSelectedWithDropDown>
-          <timeTargetWasSelectedWithDropDown value="2024-07-12T03:06:03.173282300Z" />
-          <multipleDevicesSelectedInDropDown value="true" />
-          <runningDeviceTargetsSelectedWithDialog>
-            <Target>
-              <type value="RUNNING_DEVICE_TARGET" />
-              <deviceKey>
-                <Key>
-                  <type value="SERIAL_NUMBER" />
-                  <value value="e190423a" />
-                </Key>
-              </deviceKey>
-            </Target>
-            <Target>
-              <type value="RUNNING_DEVICE_TARGET" />
-              <deviceKey>
-                <Key>
-                  <type value="SERIAL_NUMBER" />
-                  <value value="7bcb6ff" />
-                </Key>
-              </deviceKey>
-            </Target>
-          </runningDeviceTargetsSelectedWithDialog>
+          <timeTargetWasSelectedWithDropDown value="2024-07-12T17:48:22.356416800Z" />
         </State>
       </entry>
     </value>

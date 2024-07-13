@@ -132,18 +132,21 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun sendPhoto(uri: Uri) {
+    /*private fun sendPhoto(uri: Uri) {
         try {
             val pfd = contentResolver.openFileDescriptor(uri, "r")
             val filePayload = pfd?.let { Payload.fromFile(it) }
             val filenameMessage = filePayload?.id.toString() + ":" + uri.lastPathSegment
             val filenameBytesPayload = Payload.fromBytes(filenameMessage.toByteArray(StandardCharsets.UTF_8))
 
-            val endpointId = recipientPhoneNumber // Assuming the recipient's phone number is used as the endpoint ID
+            val endpoint = NearbyService.discoveredEndpoints.find { it.name == currentDeviceNumber }
 
-            Nearby.getConnectionsClient(this).sendPayload(endpointId, filenameBytesPayload)
-            if (filePayload != null) {
-                Nearby.getConnectionsClient(this).sendPayload(endpointId, filePayload)
+            if (endpoint != null) {
+                Nearby.getConnectionsClient(this).sendPayload(endpoint.id, filenameBytesPayload)
+
+                if (filePayload != null) {
+                    Nearby.getConnectionsClient(this).sendPayload(endpoint.id, filePayload)
+                }
             }
 
             val message = Message(
@@ -152,13 +155,13 @@ class ChatActivity : AppCompatActivity() {
                 content = "",
                 timestamp = System.currentTimeMillis(),
                 relays = mutableListOf(),
-                imageUri = uri.toString() // Add this line
+                imageUri = uri // Add this line
             )
             sendMessage(message)
         } catch (e: FileNotFoundException) {
             Log.e("ChatActivity", "File not found", e)
         }
-    }
+    }*/
 
     private fun loadMessages() {
         CoroutineScope(Dispatchers.Main).launch {
@@ -169,6 +172,27 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    private fun sendPhoto(uri: Uri) {
+        NearbyService.sendImageToRecipient(uri, recipientPhoneNumber)
+        val message = Message(
+            sender = senderPhoneNumber,
+            recipient = recipientPhoneNumber,
+            content = "",
+            timestamp = System.currentTimeMillis(),
+            relays = mutableListOf(),
+            imageUri = uri
+        )
+        messageList.add(message)
+
+        CoroutineScope(Dispatchers.Main).launch {
+            // Save the message to the local database
+            DatabaseHelper.saveMessage(message, message.recipient)
+        }
+
+        chatAdapter.notifyItemInserted(messageList.size - 1)
+        recyclerView.scrollToPosition(messageList.size - 1)
+    }
+
     private fun sendMessage(message: Message) {
         // Send the message via NearbyService
         NearbyService.sendMessageToRecipient(message)
@@ -176,7 +200,7 @@ class ChatActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.Main).launch {
             // Save the message to the local database
-            DatabaseHelper.saveMessage(message, currentDeviceNumber)
+            DatabaseHelper.saveMessage(message, message.recipient)
         }
 
         chatAdapter.notifyItemInserted(messageList.size - 1)
