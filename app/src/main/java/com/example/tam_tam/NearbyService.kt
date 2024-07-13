@@ -115,7 +115,7 @@ object NearbyService {
                             endpoint.id,
                             Payload.fromBytes(serializeMessage(message)),
                             deviceNumber,
-                            3
+                            2
                         )
                     }
                 }

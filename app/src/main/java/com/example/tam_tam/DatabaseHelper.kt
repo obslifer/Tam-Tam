@@ -30,7 +30,8 @@ object DatabaseHelper {
         withContext(Dispatchers.IO) {
             val key: SecretKey = CryptoUtil.generateKey(deviceNumber)
             val encryptedContent = CryptoUtil.encrypt(message.content, key)
-            val realmMessage = RealmMessage.fromMessage(message.copy(content = encryptedContent))
+            //val realmMessage = RealmMessage.fromMessage(message.copy(content = encryptedContent))
+            val realmMessage = RealmMessage.fromMessage(message)
             val realm = Realm.getDefaultInstance()
             realm.executeTransaction { it.insertOrUpdate(realmMessage) }
             realm.close()

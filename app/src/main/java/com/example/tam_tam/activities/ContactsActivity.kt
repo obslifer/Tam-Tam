@@ -66,6 +66,11 @@ class ContactsActivity : AppCompatActivity() {
         loadContacts()
     }
 
+    override fun onActivityReenter(resultCode: Int, data: Intent?) {
+        super.onActivityReenter(resultCode, data)
+        loadContacts()
+    }
+
     private fun showModifyContactDialog(contact: Contact) {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Modifier le nom du contact")

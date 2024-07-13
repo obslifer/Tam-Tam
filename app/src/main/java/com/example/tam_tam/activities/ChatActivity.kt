@@ -169,6 +169,8 @@ class ChatActivity : AppCompatActivity() {
             messageList.clear()
             messageList.addAll(messages)
             chatAdapter.notifyDataSetChanged()
+
+            Log.d("messages", messageList.toString())
         }
     }
 
