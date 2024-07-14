@@ -1,0 +1,26 @@
+<resources>
+
+    <!-- Style pour les bulles de message -->
+    <style name="MessageBubble">
+        <item name="android:background">@drawable/message_bubble_background</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:layout_gravity">start</item>
+    </style>
+
+    <!-- Style pour EditText -->
+    <style name="EditTextStyle">
+        <item name="android:background">@drawable/edit_text_background</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <!-- Style pour Button -->
+    <style name="ButtonStyle">
+        <item name="android:backgroundTint">@color/button_primary</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+
+</resources>
