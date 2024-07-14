@@ -9,6 +9,7 @@ import io.realm.kotlin.where
 
 object UserDatabaseHelper {
 
+    // Initialise Realm avec la configuration spécifiée
     fun init(context: Context) {
         Realm.init(context)
         val config = RealmConfiguration.Builder()
@@ -19,6 +20,7 @@ object UserDatabaseHelper {
         Realm.setDefaultConfiguration(config)
     }
 
+    // Sauvegarde un utilisateur dans la base de données Realm
     fun saveUser(user: User) {
         AsyncTask.execute {
             val realm = Realm.getDefaultInstance()
@@ -29,6 +31,7 @@ object UserDatabaseHelper {
         }
     }
 
+    // Récupère un utilisateur par son numéro de téléphone depuis la base de données Realm
     fun getUserByPhoneNumber(phoneNumber: String): User? {
         val realm = Realm.getDefaultInstance()
         val result = realm.where<User>().equalTo("phoneNumber", phoneNumber).findFirst()
@@ -37,6 +40,7 @@ object UserDatabaseHelper {
         return user
     }
 
+    // Récupère le numéro de téléphone d'un utilisateur par son nom depuis la base de données Realm
     fun getUserPhoneNumber(name: String): String {
         val realm = Realm.getDefaultInstance()
         val result = realm.where<User>().equalTo("name", name).findFirst()
@@ -48,6 +52,7 @@ object UserDatabaseHelper {
         return ""
     }
 
+    // Récupère tous les utilisateurs depuis la base de données Realm
     fun getAllUsers(): List<User> {
         val realm = Realm.getDefaultInstance()
         val results = realm.where<User>().findAll()
@@ -56,6 +61,7 @@ object UserDatabaseHelper {
         return users
     }
 
+    // Supprime un utilisateur par son numéro de téléphone depuis la base de données Realm
     fun deleteUser(phoneNumber: String) {
         val realm = Realm.getDefaultInstance()
         realm.executeTransaction {
