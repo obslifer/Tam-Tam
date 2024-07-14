@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/background">
+
+    <!-- Titre de l'écran -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bienvenue sur Tam-Tam"
+        android:textSize="24sp"
+        android:textColor="@color/text_primary"
+        android:textStyle="bold"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- Champ de saisie du numéro de téléphone -->
+    <EditText
+        android:id="@+id/etPhoneNumber"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Entrer votre numero de telephone"
+        android:inputType="phone"
+        android:background="@drawable/edit_text_background"
+        android:padding="16dp"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Bouton de création de compte -->
+    <Button
+        android:id="@+id/btnCreateAccount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Commencer"
+        android:textColor="@color/white"
+        android:backgroundTint="@color/button_primary"
+        app:rippleColor="@color/button_primary_pressed"
+        android:textSize="16sp"
+        android:padding="16dp"/>
+
+</LinearLayout>
