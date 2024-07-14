@@ -2,7 +2,7 @@
 
 Tam Tam est une application de messagerie hors ligne développée en Kotlin par les etudiants de Ict-L2
 
-![](img/icon.jpg)  ![](img/pre.jpg)
+![](img/icon.jpg) <br> ![](img/pre.jpg)
 
 ## Comment ca marche ?    
 ### ajouter un contact
