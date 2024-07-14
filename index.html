@@ -1,1 +1,222 @@
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport de Développement - Tam Tam</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        pre {
+            background: #f4f4f4;
+            border: 1px solid #ddd;
+            padding: 10px;
+            overflow-x: auto;
+        }
+        .code-block {
+            background: #333;
+            color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .code-block code {
+            color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Guide de l'application "Tam Tam"</h1>
+        <h2>Nom de l'application : Tam Tam</h2>
+        
+        <h3>Description générale :</h3>
+        <p>Tam Tam est une application de messagerie hors ligne développée en Kotlin. Elle utilise Nearby Connection de Google pour permettre aux utilisateurs d'envoyer et recevoir des messages texte et des images sans connexion Internet. L'application fonctionne de manière décentralisée avec une stratégie de cluster.</p>
+        
+        <h3>Fonctionnalités principales :</h3>
+        <ol>
+            <li>
+                <strong>Découverte et publicité des appareils :</strong>
+                <ul>
+                    <li>Utilise <code>Nearby.getConnectionsClient</code> pour trouver et se connecter aux appareils à proximité.</li>
+                    <li>Utilise la stratégie <code>P2P_CLUSTER</code> pour les connexions.</li>
+                    <li>Lorsqu'un appareil est trouvé, l'application tente automatiquement de se connecter.</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Envoi et réception de messages :</strong>
+                <ul>
+                    <li>Les messages peuvent être envoyés à des destinataires spécifiques ou diffusés à tous les appareils connectés.</li>
+                    <li>Les messages sont stockés dans une base de données locale.</li>
+                    <li>Chaque message contient l'expéditeur, le destinataire, le contenu, l'horodatage, une liste de relais et éventuellement un URI d'image.</li>
+                    <li>Les messages non envoyés en raison d'un manque total de réseau sont supprimés.</li>
+                    <li>Lorsqu'un message est reçu d'un numéro non enregistré, il est enregistré sous le nom "Inconnu".</li>
+                    <li>Un message ne peut être relayé plus de 10 fois et ne peut pas être envoyé plusieurs fois au même appareil.</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Gestion des connexions :</strong>
+                <ul>
+                    <li>Lorsqu'un appareil se connecte à un autre appareil, il envoie tous les messages non destinés à lui-même.</li>
+                    <li>Les tentatives de connexion et d'envoi de fichiers sont réessayées jusqu'à trois fois en cas d'échec.</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Envoi d'images :</strong>
+                <ul>
+                    <li>Les images peuvent être envoyées sous forme de fichier.</li>
+                    <li>Un message de nom de fichier est envoyé avant l'image pour identifier l'image reçue.</li>
+                    <li>Utilisation de Picasso pour charger et afficher les images dans l'interface utilisateur.</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Rootage des messages :</strong>
+                <ul>
+                    <li>Un message dont le destinataire n’est pas disponible (à portée de connexion) sera envoyé à tous les appareils connectés.</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Affichage des messages :</strong>
+                <ul>
+                    <li>Les messages sont affichés dans un <code>RecyclerView</code>.</li>
+                    <li>Les messages envoyés et reçus ont des mises en page différentes.</li>
+                    <li>Les messages avec des images affichent l'image, tandis que les messages texte affichent le texte du message.</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Gestion des contacts :</strong>
+                <ul>
+                    <li>Les contacts peuvent être renommés avec un appui long.</li>
+                    <li>Les messages d'un numéro non enregistré sont sauvegardés sous "Inconnu".</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h3>Limites et manques :</h3>
+        <ul>
+            <li>Pas de messagerie de groupe.</li>
+            <li>Les écrans ne se rafraîchissent pas automatiquement lorsque les listes sont mises à jour.</li>
+            <li>Le rebond des messages avec des images est très compliqué.</li>
+            <li>Les utilisateurs ne peuvent pas changer leur propre numéro.</li>
+            <li>La fonction de décryptage crée des erreurs, donc le cryptage a été mis de côté pour le moment.</li>
+            <li>Lors de la première ouverture de l'application, après avoir entré le numéro, il faut relancer l'application (parfois même après avoir enregistré le premier contact, cela dépend des téléphones).</li>
+            <li>Certains téléphones ne demandent pas toutes les permissions, ce qui perturbe l'envoi de messages.</li>
+        </ul>
+
+        <h3>Exemples de code :</h3>
+
+        <h4>Envoi d'un message :</h4>
+        <div class="code-block">
+<pre><code class="language-kotlin">
+fun sendMessageToEndpoint(endpointId: String, message: Message, deviceNumber: String) {
+    CoroutineScope(Dispatchers.Main).launch {
+        val endpoint = discoveredEndpoints.find { it.id == endpointId }
+        if (endpoint != null && endpoint.available) {
+            sendPayloadWithRetry(endpointId, Payload.fromBytes(serializeMessage(message)), deviceNumber, 3)
+        } else {
+            Log.e(TAG, "Endpoint $endpointId not available")
+        }
+    }
+}
+</code></pre>
+        </div>
+
+        <h4>Réception d'un message :</h4>
+        <div class="code-block">
+<pre><code class="language-kotlin">
+private val payloadCallback = object : PayloadCallback() {
+    override fun onPayloadReceived(endpointId: String, payload: Payload) {
+        if (payload.type == Payload.Type.BYTES) {
+            val receivedBytes = payload.asBytes()!!
+            val message = deserializeMessage(receivedBytes)
+            handleMessage(message)
+        }
+    }
+
+    override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
+        // Handle updates if needed
+    }
+}
+
+private fun handleMessage(message: Message) {
+    CoroutineScope(Dispatchers.Main).launch {
+        DatabaseHelper.saveMessage(message, currentUserPhoneNumber)
+        if (message.recipient == currentUserPhoneNumber) {
+            Log.d(TAG, "Message received: ${message.content}")
+            val contact = DatabaseHelper.getContact(message.sender)
+            if (contact == null) {
+                DatabaseHelper.saveContact(message.sender, "Inconnu")
+            }
+        } else {
+            if (message.relays.size < 10) {
+                message.relays.add(currentUserPhoneNumber)
+                sendMessageToAllEndpoints(message, currentUserPhoneNumber)
+            } else {
+                Log.d(TAG, "Message relay limit reached")
+            }
+        }
+    }
+}
+</code></pre>
+        </div>
+
+        <h4>Envoi de message à tous les appareils connectés :</h4>
+        <div class="code-block">
+<pre><code class="language-kotlin">
+private fun sendMessageToAllEndpoints(message: Message, currentUserPhoneNumber: String) {
+    for (endpoint in discoveredEndpoints) {
+        if (endpoint.id != currentUserPhoneNumber && !message.relays.contains(endpoint.id)) {
+            sendMessageToEndpoint(endpoint.id, message, currentUserPhoneNumber)
+        }
+    }
+}
+</code></pre>
+        </div>
+
+        <h4>Affichage d'un message avec image :</h4>
+        <div class="code-block">
+<pre><code class="language-kotlin">
+class SentMessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    private val messageTextView: TextView = itemView.findViewById(R.id.text_message_body)
+    private val messageTimeTextView: TextView = itemView.findViewById(R.id.text_message_time)
+    private val messageImageView: ImageView = itemView.findViewById(R.id.image_message_body)
+
+    fun bind(message: Message) {
+        if (message.imageUri.isNotEmpty()) {
+            messageImageView.visibility = View.VISIBLE
+            messageTextView.visibility = View.GONE
+            Picasso.get().load(message.imageUri).into(messageImageView)
+        } else {
+            messageTextView.visibility = View.VISIBLE
+            messageImageView.visibility = View.GONE
+            messageTextView.text = message.content
+        }
+        messageTimeTextView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(message.timestamp)
+    }
+}
+</code></pre>
+        </div>
+
+        <h3>Conclusion :</h3>
+        <p>L'application "Tam Tam" offre une solution de messagerie hors ligne innovante et pratique pour les utilisateurs ayant des connexions Internet limitées ou inexistantes. Elle met en avant la capacité de communication en proximité tout en utilisant des technologies modernes et robustes comme Kotlin, Nearby Connections, et Realm.</p>
+    </div>
+</body>
+</html>
